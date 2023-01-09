@@ -1,17 +1,19 @@
 
-from flask import Flask, Response
+from flask import Flask, Response, jsonify
+from flask_cors import CORS
 import json
 from Mock import FlightSystem
 import time
 import random
 
 app = Flask(__name__)
+CORS(app)
 
 flight_system = FlightSystem()
 
 @app.route('/init')
 def init():
-    return json.dumps([f.toJSON() for f in flight_system.flights])
+    return flight_system.toJson()
 
 @app.route('/stream')
 def stream():
