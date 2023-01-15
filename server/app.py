@@ -4,6 +4,7 @@ from flask_cors import CORS
 import json
 from Mock import FlightSystem
 import time
+import datetime
 import random
 
 app = Flask(__name__)
@@ -19,6 +20,11 @@ def init():
 def stream():
     def get_data():
         while True:
+            message = 'event: message\n'
+            message += "data: {" + flight_system.update() + "}\n\n"
+            yield message
             time.sleep(random.randint(1, 5))
-            yield json.dumps(flight_system.update())
     return Response(get_data(), mimetype='text/event-stream')
+
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -29,13 +29,8 @@ class FlightSystem:
         for i in range(mock_amt):
             self.flights.append(Flight())
     def update(self):
-        amt = random.randint(1, mock_amt-1)
-        updated_indices = set()
-        while len(updated_indices) < amt:
-            updated_indices.add(random.randint(0, mock_amt-1))
-        for i in updated_indices:
-            self.flights[i].status = random.choice(status)
-        updated_flights = [self.flights[i] for i in updated_indices]
-        return [FlightEncoder().encode(f) for f in updated_flights]
+        _flight = random.choice(self.flights).flight
+        _status = random.choice(status)
+        return f'\"flight\": \"{_flight}\", \"status\": \"{_status}\"'
     def toJson(self):
         return [FlightEncoder().encode(f) for f in self.flights]

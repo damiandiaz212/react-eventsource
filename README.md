@@ -4,12 +4,12 @@ This application allows you to track the real-time status of ***mock*** flights 
 
 ## Requirements
 - Node.js
-- React
 - Python 3
-- Flask
 
 ## Setup & Usage
 #### Server
+    pip install -r requirements.txt
+    set FLASK_APP=app
     flask run
 #### Client
     yarn

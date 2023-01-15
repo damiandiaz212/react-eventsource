@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTable } from "react-table";
 import "./Application.scss";
 
 interface IFlight {
@@ -8,84 +9,140 @@ interface IFlight {
   status: string;
 }
 
+const Application = () => {
 
-const Application: React.FC = () => {
+  const [data, setData] = useState([]);
+  const [ready, setReady] = useState(false);
+  const dataRef = useRef(data);
 
-  const [data, setData] = useState<IFlight[]>([]);
+  const columns = React.useMemo(
+    () => [
+      {
+        Header: 'Flight',
+        accessor: 'flight'
+      },
+      {
+        Header: 'Duration',
+        accessor: 'duration'
+      },
+      {
+        Header: 'Destination',
+        accessor: 'destination'
+      },
+      {
+        Header: 'Status',
+        accessor: 'status'
+      },
+    ],
+    []
+  );
+  
+  const {
+    getTableProps,
+    getTableBodyProps,
+    headerGroups,
+    rows,
+    prepareRow,
+  } = useTable({
+    columns,
+    data,
+  });
 
   useEffect(() => {
     fetch('http://localhost:5000/init')
-    .then((res) => res.json())
-    .then((data) => {
-      const arr: IFlight[] = []
-      data.map((d: any) => arr.push(JSON.parse(d) as IFlight))
-      setData(arr)
-    });
+      .then((res) => res.json())
+      .then((data) => {
+        let flightData: IFlight[] = [];
+        data.map((entry: any) => {
+          const flight = JSON.parse(entry) as IFlight
+          flightData = [...flightData, flight];
+        })
+        setData(flightData);
+        setReady(true);
+      });
+  }, []);
 
-    const sse = new EventSource('http://localhost:5000/stream', { withCredentials: true })
-    sse.onmessage = (e) => updateData(e);
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data])
 
-    return () => {
-      sse.close();
+  useEffect(() => {
+    if (ready) {
+      const sse = new EventSource('http://localhost:5000/stream')
+      sse.onmessage = (e) => updateFlightStatus(JSON.parse(e.data))
+      sse.onerror = (e) => { console.error('error!') }
     }
+  }, [ready, data])
 
-  },[])
-
-  const updateData = (e: any) => {
-    const data = JSON.parse(e.data);
-    console.log(data)
-  }
+  const updateFlightStatus = ((update: IFlight) => {
+    const newData = dataRef.current.map((entry) => {
+      if (entry.flight === update.flight) {
+        return { ...entry, status: update.status };
+      }
+      return entry;
+    })
+    setData(newData);
+  });
 
   const getStatusBackground = (status: string) => {
-    switch(status) {
+    switch (status) {
       case 'CANCELLED':
-        return 'darkslategrey'
+        return 'black'
       case 'DELAYED':
-        return '#F1C40F'
+        return 'darkyellow'
       case 'ON-TIME':
-        return '#27AE60'
+        return 'darkgreen'
       case 'DEPARTED':
-        return '#5499C7'
+        return 'darkblue'
       case 'ARRIVED':
-        return '#E74C3C'
+        return 'darkred'
     }
   }
 
   return (
     <section>
-      <div className="tbl-header">
-        <table cellPadding="0" cellSpacing="0" border={0}>
-          <thead>
-            <tr>
-              <th>Flight</th>
-              <th>Duration</th>
-              <th>Destination</th>
-              <th>Status</th>
+      <table {...getTableProps()}>
+        <thead>
+          {headerGroups.map(headerGroup => (
+            <tr {...headerGroup.getHeaderGroupProps()}>
+              {headerGroup.headers.map(column => (
+                <th
+                  {...column.getHeaderProps()}
+                  style={{
+                    background: 'white',
+                    color: 'black',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  {column.render('Header')}
+                </th>
+              ))}
             </tr>
-          </thead>
-        </table>
-      </div>
-      <div className="tbl-content">
-        <table cellPadding={'0'} cellSpacing={'0'} border={0}>
-          <tbody>
-            {data.map((flight: IFlight) => {
-              return (
-                <tr key={flight.flight}>
-                  <td>{flight.flight}</td>
-                  <td>{flight.duration}</td>
-                  <td>{flight.destination}</td>
-                  <td style={{
-                    backgroundColor: getStatusBackground(flight.status),
-                    color: 'white'
-                  }}>
-                    {flight.status}
+          ))}
+        </thead>
+        <tbody {...getTableBodyProps()}>
+          {rows.map(row => {
+            prepareRow(row)
+            return (
+              <tr {...row.getRowProps()}>
+                {row.cells.map(cell => {
+                  return (
+                    <td
+                      {...cell.getCellProps()}
+                      style={{
+                        color: 'white',
+                        background: cell.column.Header === 'Status' ? getStatusBackground(cell.value) : 'black',
+                      }}
+                    >
+                      {cell.render('Cell')}
                     </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                  )
+                })}
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
     </section>
   );
 };
