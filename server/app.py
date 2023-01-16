@@ -23,7 +23,7 @@ def stream():
             message = 'event: message\n'
             message += "data: {" + flight_system.update() + "}\n\n"
             yield message
-            time.sleep(random.randint(1, 5))
+            time.sleep(random.randint(1, 1))
     return Response(get_data(), mimetype='text/event-stream')
 
 if __name__ == '__main__':
